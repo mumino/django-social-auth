@@ -44,7 +44,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = 'example.urls'
+ROOT_URLCONF = 'example_social_auth.urls'
 
 TEMPLATE_DIRS = (
     join(ROOT_PATH, 'templates')
