@@ -379,7 +379,11 @@ class OpenIdAuth(BaseAuth):
         if OPENID_ID_FIELD not in self.data:
             raise ValueError('Missing openid identifier')
         return self.data[OPENID_ID_FIELD]
-
+    
+    @classmethod
+    def enabled(cls):
+        """Return backend enabled status, enabled if in AUTHENTICATION_BACKENDS"""
+        return '.'.join((cls.__module__,cls.AUTH_BACKEND.__name__)) in getattr(settings, 'AUTHENTICATION_BACKENDS', ())
 
 class BaseOAuth(BaseAuth):
     """OAuth base class"""
@@ -534,7 +538,8 @@ def get_backends():
 
 # load backends from defined modules
 BACKENDS = get_backends()
-BACKENDS[OpenIdAuth.AUTH_BACKEND.name] = OpenIdAuth
+if OpenIdAuth.enabled():
+    BACKENDS[OpenIdAuth.AUTH_BACKEND.name] = OpenIdAuth
 
 def get_backend(name, *args, **kwargs):
     """Return auth backend instance *if* it's registered, None in other case"""
