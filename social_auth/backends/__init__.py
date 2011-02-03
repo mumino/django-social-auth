@@ -283,8 +283,8 @@ class BaseAuth(object):
 
     @classmethod
     def enabled(cls):
-        """Return backend enabled status, all enabled by default"""
-        return True
+        """Return backend enabled status, enabled if in AUTHENTICATION_BACKENDS"""
+        return '.'.join((cls.__module__,cls.AUTH_BACKEND.__name__)) in getattr(settings, 'AUTHENTICATION_BACKENDS', ())
 
 
 class OpenIdAuth(BaseAuth):
@@ -379,11 +379,6 @@ class OpenIdAuth(BaseAuth):
         if OPENID_ID_FIELD not in self.data:
             raise ValueError('Missing openid identifier')
         return self.data[OPENID_ID_FIELD]
-    
-    @classmethod
-    def enabled(cls):
-        """Return backend enabled status, enabled if in AUTHENTICATION_BACKENDS"""
-        return '.'.join((cls.__module__,cls.AUTH_BACKEND.__name__)) in getattr(settings, 'AUTHENTICATION_BACKENDS', ())
 
 class BaseOAuth(BaseAuth):
     """OAuth base class"""
@@ -503,10 +498,12 @@ class ConsumerBasedOAuth(BaseOAuth):
     @classmethod
     def enabled(cls):
         """Return backend enabled status by checking basic settings"""
-        return all(hasattr(settings, name) for name in
+        if super(ConsumerBasedOAuth, cls).enabled():
+            return all(hasattr(settings, name) for name in
                         (cls.SETTINGS_KEY_NAME,
                          cls.SETTINGS_SECRET_NAME))
-
+        
+        return False
 
 # import sources from where check for auth backends
 SOCIAL_AUTH_IMPORT_SOURCES = (
