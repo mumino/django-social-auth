@@ -22,7 +22,7 @@ def complete(request, backend):
     backend = get_backend(backend, request, request.path)
     if not backend:
         return HttpResponseServerError('Incorrect authentication service')
-    user = backend.auth_complete()
+    user = backend.auth_complete(session=request.session)
     if user and getattr(user, 'is_active', True):
         login(request, user)
         url = request.session.pop(REDIRECT_FIELD_NAME, '') or \
@@ -47,7 +47,7 @@ def associate_complete(request, backend):
     backend = get_backend(backend, request, request.path)
     if not backend:
         return HttpResponseServerError('Incorrect authentication service')
-    backend.auth_complete(user=request.user)
+    backend.auth_complete(user=request.user, session=request.session)
     url = request.session.pop(REDIRECT_FIELD_NAME, '') or \
           getattr(settings, 'LOGIN_REDIRECT_URL', '')
     return HttpResponseRedirect(url)

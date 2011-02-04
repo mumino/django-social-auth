@@ -3,6 +3,7 @@ import warnings
 
 from django.db import models
 from django.conf import settings
+from django.contrib.auth import  user_logged_in
 
 # If User class is overrided, it must provide the following fields,
 # or it won't be playing nicely with auth module:
@@ -33,10 +34,11 @@ else:
 
 class UserSocialAuth(models.Model):
     """Social Auth association model"""
-    user = models.ForeignKey(User, related_name='social_auth')
+    user = models.ForeignKey(User, related_name='social_auth', null=True, blank=True)
     provider = models.CharField(max_length=32)
     uid = models.CharField(max_length=255)
     extra_data = models.TextField(default='', blank=True)
+    session_key = models.CharField(max_length=64, null=True, blank=True, db_index=True)
 
     class Meta:
         """Meta data"""
@@ -70,3 +72,10 @@ class Association(models.Model):
     def __unicode__(self):
         """Unicode representation"""
         return '%s %s' % (self.handle, self.issued)
+
+def p(user, request, *args, **kwargs):
+    social_key = request.session.get("social_key")
+    if social_key:
+        UserSocialAuth.objects.filter(user=None).filter(session_key=social_key).update(user=user, session_key=None)
+        del request.session["social_key"]
+user_logged_in.connect(p)

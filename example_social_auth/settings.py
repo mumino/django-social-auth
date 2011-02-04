@@ -35,13 +35,15 @@ TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
 )
-
+INTERNAL_IPS = ('127.0.0.1',)
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    
 )
 
 ROOT_URLCONF = 'example_social_auth.urls'
@@ -57,7 +59,9 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.admin',
+    'south',
     'social_auth',
+    'debug_toolbar',
     'app',
 )
 
@@ -72,7 +76,3 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-try:
-    from local_settings import *
-except:
-    pass

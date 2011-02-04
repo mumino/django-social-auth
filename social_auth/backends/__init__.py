@@ -30,6 +30,8 @@ from social_auth.models import UserSocialAuth
 from social_auth.store import DjangoOpenIDStore
 from social_auth.signals import pre_update
 
+import logging
+logger = logging.getLogger(__name__)
 
 # key for username in user details dict used around, see get_user_details
 # method
@@ -73,37 +75,60 @@ class SocialAuthBackend(ModelBackend):
         # Validate backend and arguments. Require that the OAuth response
         # be passed in as a keyword argument, to make sure we don't match
         # the username/password calling conventions of authenticate.
-        if not (self.name and kwargs.get(self.name) and 'response' in kwargs):
+        if not (self.name and kwargs.get(self.name) and 'response' in kwargs and "session" in kwargs):
             return None
 
         response = kwargs.get('response')
+        session = kwargs.get('session')
         details = self.get_user_details(response)
         uid = self.get_user_id(details, response)
+        user = kwargs.get('user',None)
+        social_key = session.setdefault("social_key",session.session_key)
         try:
             social_user = UserSocialAuth.objects.select_related('user')\
                                                 .get(provider=self.name,
                                                      uid=uid)
         except UserSocialAuth.DoesNotExist:
-            user = kwargs.get('user')
+
             if user is None:  # new user
-                if not getattr(settings, 'SOCIAL_AUTH_CREATE_USERS', True):
-                    return None
-                username = self.username(details)
-                email = details.get('email')
-                user = User.objects.create_user(username=username, email=email)
-            social_user = self.associate_auth(user, uid, response, details)
+                if getattr(settings, 'SOCIAL_AUTH_CREATE_USERS', False):
+                    username = self.username(details)
+                    email = details.get('email')
+                    user = User.objects.create_user(username=username, email=email)
+            social_user = self.associate_auth(user, uid, response, details, social_key)
         else:
+
             # This account was registered to another user, so we raise an
             # error in such case and the view should decide what to do on
             # at this moment, merging account is not an option because that
             # would imply update user references on other apps, that's too
             # much intrusive
-            if 'user' in kwargs and kwargs['user'] != social_user.user:
+            if  user and social_user.user and user != social_user.user:
                 raise ValueError('Account already in use.')
+            # This account created in past but wasn't registered to any user.
+            elif not social_user.user:
+                if user :
+                    social_user.user = user
+                    social_user.session_key = None
+                    social_user.save()
+                elif social_user.session_key != social_key :
+                    social_user.session_key = social_key
+                    social_user.save()
             user = social_user.user
 
-        # Update user account data.
-        self.update_user_details(user, response, details)
+            
+        # This social account created before but not registerd. Now you can register it. 
+        if not social_user.user and User:
+            social_user.user = user
+            social_user.save()
+
+        # Update user account data or session data.
+        if user:
+            self.update_user_details(user, response, details)
+        else:
+            d = session.setdefault("social_auth",{})
+            for key, value in details.iteritems():
+                d[key] = value
 
         # Update extra_data storage, unless disabled by setting
         if getattr(settings, 'SOCIAL_AUTH_EXTRA_DATA', True):
@@ -144,10 +169,11 @@ class SocialAuthBackend(ModelBackend):
                 break
         return username
 
-    def associate_auth(self, user, uid, response, details):
+    def associate_auth(self, user, uid, response, details, session_key):
         """Associate a Social Auth with an user account."""
         return UserSocialAuth.objects.create(user=user, uid=uid,
-                                             provider=self.name)
+                                             provider=self.name, 
+                                             session_key=session_key)
 
     def extra_data(self, user, uid, response, details):
         """Return default blank user extra data"""
