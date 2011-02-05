@@ -53,6 +53,7 @@ TEMPLATE_DIRS = (
 )
 
 INSTALLED_APPS = (
+    'social_auth',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -60,7 +61,6 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.admin',
     'south',
-    'social_auth',
     'debug_toolbar',
     'app',
 )

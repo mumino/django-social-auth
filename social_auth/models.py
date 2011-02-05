@@ -3,7 +3,10 @@ import warnings
 
 from django.db import models
 from django.conf import settings
-from django.contrib.auth import  user_logged_in
+try:
+    from django.contrib.auth.signals import  user_logged_in
+except:
+    from social_auth.signals import user_logged_in
 
 # If User class is overrided, it must provide the following fields,
 # or it won't be playing nicely with auth module:
