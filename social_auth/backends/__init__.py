@@ -116,12 +116,6 @@ class SocialAuthBackend(ModelBackend):
                     social_user.save()
             user = social_user.user
 
-            
-        # This social account created before but not registerd. Now you can register it. 
-        if not social_user.user and User:
-            social_user.user = user
-            social_user.save()
-
         # Update user account data or session data.
         if user:
             self.update_user_details(user, response, details)
@@ -131,7 +125,7 @@ class SocialAuthBackend(ModelBackend):
                 d[key] = value
 
         # Update extra_data storage, unless disabled by setting
-        if getattr(settings, 'SOCIAL_AUTH_EXTRA_DATA', True):
+        if getattr(settings, 'SOCIAL_AUTH_EXTRA_DATA', True) and user:
             extra_data = self.extra_data(user, uid, response, details)
             if extra_data and social_user.extra_data != extra_data:
                 social_user.extra_data = extra_data
