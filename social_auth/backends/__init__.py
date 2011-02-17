@@ -20,7 +20,8 @@ from openid.extensions import sreg, ax
 from oauth.oauth import OAuthConsumer, OAuthToken, OAuthRequest, \
                         OAuthSignatureMethod_HMAC_SHA1
 
-from django.conf import settings
+from django.conf import settings as djangosettings
+from social_auth.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.backends import ModelBackend
 from django.utils.hashcompat import md5_constructor
@@ -512,8 +513,13 @@ class ConsumerBasedOAuth(BaseOAuth):
         """Return tuple with Consumer Key and Consumer Secret for current
         service provider. Must return (key, secret), order *must* be respected.
         """
-        return getattr(settings, self.SETTINGS_KEY_NAME), \
-               getattr(settings, self.SETTINGS_SECRET_NAME)
+        key = getattr(settings, self.SETTINGS_KEY_NAME)
+        secret = getattr(settings, self.SETTINGS_SECRET_NAME)
+        if callable(key):
+            key = key()
+        if callable(secret):
+            secret = secret()
+        return key, secret
 
     @classmethod
     def enabled(cls):
