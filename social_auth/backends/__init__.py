@@ -516,9 +516,9 @@ class ConsumerBasedOAuth(BaseOAuth):
         key = getattr(settings, self.SETTINGS_KEY_NAME)
         secret = getattr(settings, self.SETTINGS_SECRET_NAME)
         if callable(key):
-            key = key()
+            key = key(self.request)
         if callable(secret):
-            secret = secret()
+            secret = secret(self.request)
         return key, secret
 
     @classmethod

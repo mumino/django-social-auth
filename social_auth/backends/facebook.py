@@ -11,7 +11,7 @@ setting, it must be a list of values to request.
 import cgi
 import urllib
 
-from django.conf import settings
+from social_auth.conf import settings
 from django.utils import simplejson
 from django.contrib.auth import authenticate
 
@@ -40,9 +40,10 @@ class FacebookBackend(OAuthBackend):
 
 class FacebookAuth(BaseOAuth):
     """Facebook OAuth mechanism"""
+    
     def auth_url(self):
         """Returns redirect url"""
-        args = {'client_id': settings.FACEBOOK_APP_ID,
+        args = {'client_id': self.get_key_from_conf('FACEBOOK_APP_ID'),
                 'redirect_uri': self.redirect_uri}
         if hasattr(settings, 'FACEBOOK_EXTENDED_PERMISSIONS'):
             args['scope'] = ','.join(settings.FACEBOOK_EXTENDED_PERMISSIONS)
@@ -52,9 +53,9 @@ class FacebookAuth(BaseOAuth):
         """Returns user, might be logged in"""
         if 'code' in self.data:
             url = FACEBOOK_ACCESS_TOKEN_URL + '?' + \
-                  urllib.urlencode({'client_id': settings.FACEBOOK_APP_ID,
+                  urllib.urlencode({'client_id': self.get_key_from_conf('FACEBOOK_APP_ID'),
                                 'redirect_uri': self.redirect_uri,
-                                'client_secret': settings.FACEBOOK_API_SECRET,
+                                'client_secret': self.get_key_from_conf('FACEBOOK_API_SECRET'),
                                 'code': self.data['code']})
             response = cgi.parse_qs(urllib.urlopen(url).read())
             access_token = response['access_token'][0]
@@ -82,6 +83,16 @@ class FacebookAuth(BaseOAuth):
             return simplejson.load(urllib.urlopen(url))
         except simplejson.JSONDecodeError:
             return None
+    
+    
+    def get_key_from_conf(self, name):
+        """Get key from settings
+        """
+        key = getattr(settings, name)
+        if callable(key):
+            key = key(self.request)
+        return key,
+
 
     @classmethod
     def enabled(cls):
