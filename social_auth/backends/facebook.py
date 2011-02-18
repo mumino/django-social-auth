@@ -91,7 +91,7 @@ class FacebookAuth(BaseOAuth):
         key = getattr(settings, name)
         if callable(key):
             key = key(self.request)
-        return key,
+        return key
 
 
     @classmethod
