@@ -2,7 +2,7 @@
 import warnings
 
 from django.db import models
-from django.conf import settings
+from social_auth.conf import settings
 try:
     from django.contrib.auth.signals import  user_logged_in
 except:
@@ -76,9 +76,14 @@ class Association(models.Model):
         """Unicode representation"""
         return '%s %s' % (self.handle, self.issued)
 
-def p(user, request, *args, **kwargs):
+def associate_from_session(user, request, *args, **kwargs):
     social_key = request.session.get("social_key")
     if social_key:
         UserSocialAuth.objects.filter(user=None).filter(session_key=social_key).update(user=user, session_key=None)
         del request.session["social_key"]
-user_logged_in.connect(p)
+    USER_DATA_SESSION_NAME = getattr(settings, 'USER_DATA_SESSION_NAME')
+    try:
+        del request.session[USER_DATA_SESSION_NAME]
+    except:
+        pass
+user_logged_in.connect(associate_from_session)
