@@ -56,6 +56,7 @@ AX_SCHEMA_ATTRS = [
 SREG_ATTR = ['email', 'fullname', 'nickname']
 OPENID_ID_FIELD = 'openid_identifier'
 SESSION_NAME = 'openid'
+USER_DATA_SESSION_NAME = getattr(settings, 'USER_DATA_SESSION_NAME')
 
 # get User class, could not be auth.User
 User = UserSocialAuth._meta.get_field('user').rel.to
@@ -121,7 +122,7 @@ class SocialAuthBackend(ModelBackend):
         if user:
             self.update_user_details(user, response, details)
         else:
-            d = session.setdefault("social_auth",{})
+            d = session.setdefault(USER_DATA_SESSION_NAME,{})
             for key, value in details.iteritems():
                 d[key] = value
 

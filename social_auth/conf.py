@@ -12,6 +12,8 @@ def dynamic_import(path):
 
 #TODO: Defaults will be here
 class Settings(object):
+    USER_DATA_SESSION_NAME = 'social_data'
+    
     def __getattribute__(self, name):
         if hasattr(djangosettings, name):
             return getattr(djangosettings, name)
