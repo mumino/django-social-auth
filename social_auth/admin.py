@@ -6,10 +6,11 @@ from social_auth.models import UserSocialAuth, Nonce, Association
 
 class UserSocialAuthOption(admin.ModelAdmin):
     """Social Auth user options"""
-    list_display = ('id', 'user', 'provider')
+    list_display = ('id', 'user', 'provider','created_on')
     search_fields = ('user__name',)
     list_filter = ('provider',)
     raw_id_fields = ('user',)
+    readonly_fields = ('created_on',)
 
 
 class NonceOption(admin.ModelAdmin):
