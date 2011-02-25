@@ -42,7 +42,7 @@ class UserSocialAuth(models.Model):
     uid = models.CharField(max_length=255)
     extra_data = models.TextField(default='', blank=True)
     session_key = models.CharField(max_length=64, null=True, blank=True, db_index=True)
-
+    created_on = models.DateTimeField(auto_now_add=True)
     class Meta:
         """Meta data"""
         unique_together = ('provider', 'uid')
