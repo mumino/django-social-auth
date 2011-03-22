@@ -10,11 +10,11 @@ implements a common interface to define new authentication providers from
 third parties.
 
 
-----
+-----
 Demo
-----
-There's a demo at http://social.matiasaguirre.net/, it lacks Orkut support
-at the moment.
+-----
+There's a demo at http://social.matiasaguirre.net/.
+Note: It lacks Orkut support at the moment.
 
 
 --------
@@ -28,6 +28,7 @@ credentials, some features are:
 
     * `Google OpenID`_
     * `Google OAuth`_
+    * `Google OAuth2`_
     * `Yahoo OpenID`_
     * OpenId_ like myOpenID_
     * `Twitter OAuth`_
@@ -37,6 +38,7 @@ credentials, some features are:
 
     * `LiveJournal OpenID`_
     * `Orkut OAuth`_
+    * `Linkedin OAuth`_
 
 - Basic user data population and signaling, to allows custom fields values
   from providers response
@@ -53,7 +55,7 @@ Dependencies that *must* be meet to use the application:
 
 - OpenId_ support depends on python-openid_
 
-- OAuth_ support depends on python-oauth_
+- OAuth_ support depends on python-oauth2_
 
 - Twitter and Facebook support demands an application registration
   on their corresponding sites.
@@ -101,8 +103,10 @@ Configuration
         'social_auth.backends.twitter.TwitterBackend',
         'social_auth.backends.facebook.FacebookBackend',
         'social_auth.backends.google.GoogleOAuthBackend',
+        'social_auth.backends.google.GoogleOAuth2Backend',
         'social_auth.backends.google.GoogleBackend',
         'social_auth.backends.yahoo.YahooBackend',
+        'social_auth.backends.contrib.linkedin.LinkedinBackend',
         'social_auth.backends.contrib.LiveJournalBackend',
         'social_auth.backends.contrib.orkut.OrkutBackend',
         'social_auth.backends.OpenIDBackend',
@@ -133,6 +137,8 @@ Configuration
     TWITTER_CONSUMER_SECRET  = ''
     FACEBOOK_APP_ID          = ''
     FACEBOOK_API_SECRET      = ''
+    LINKEDIN_CONSUMER_KEY    = ''
+    LINKEDIN_CONSUMER_SECRET = ''
     ORKUT_CONSUMER_KEY       = ''
     ORKUT_CONSUMER_SECRET    = ''
     GOOGLE_CONSUMER_KEY      = ''
@@ -145,6 +151,14 @@ Configuration
     LOGIN_ERROR_URL    = '/login-error/'
 
   Check Django documentation at `Login URL`_ and `Login redirect URL`_
+
+  In case of authentication error, the message can be stored in session
+  if the following setting is defined::
+
+    SOCIAL_AUTH_ERROR_KEY = 'social_errors'
+
+  This defines the desired session key where last error message should be
+  stored. It's disabled by default.
 
 - Configure authentication and association complete URL names to avoid
   possible clashes::
@@ -182,10 +196,24 @@ Configuration
 
   Final user name will have an integer suffix in case it's already taken.
 
-- OAuth_ authentication will store access_token by default, set this value
-  to False to avoid such behavior::
+- Backends will store extra values from response by default, set this to False
+  to avoid such behavior::
 
     SOCIAL_AUTH_EXTRA_DATA = False
+
+  Also more extra values will be stored if defined, details about this setting
+  are listed below on OpenId and OAuth sections.
+
+  Session expiration time is an special value, it's recommended to define::
+
+    SOCIAL_AUTH_EXPIRATION = 'expires'
+
+  to and use such setting name where expiration times are returned. View that
+  completes login process will set session expiration time using this name if
+  it's present or 'expires' by default. Expiration time saving can be disabled
+  setting::
+
+    SOCIAL_AUTH_SESSION_EXPIRATION = False
 
 - It's possible to override the used User model if needed::
 
@@ -247,6 +275,24 @@ OpenId_ support is simpler to implement than OAuth_. Google and Yahoo
 providers are supported by default, others are supported by POST method
 providing endpoint URL.
 
+OpenId_ backends can store extra data in UserSocialAuth.extra_data field
+by defining a set of values names to retrieve from any of the used schemas,
+pettributeExchange and SimpleRegistration. As their keywords differ we need
+two settings.
+
+Settings is per backend, so we have two possible values for each one. Name
+is dynamically checked using uppercase backend name as prefix::
+
+    <uppercase backend name>_SREG_EXTRA_DATA
+    <uppercase backend name>_AX_EXTRA_DATA
+
+Example::
+
+    GOOGLE_SREG_EXTRA_DATA = [(..., ...)]
+    GOOGLE_AX_EXTRA_DATA = [(..., ...)]
+
+Settings must be a list of tuples mapping value name in response and value
+alias used to store.
 
 -----
 OAuth
@@ -258,6 +304,20 @@ but provides the option for unregistered applications.
 
 Check next sections for details.
 
+OAuth_ backends also can store extra data in UserSocialAuth.extra_data field
+by defining a set of values names to retrieve from service response.
+
+Settings is per backend and it's name is dynamically checked using uppercase
+backend name as prefix::
+
+    <uppercase backend name>_EXTRA_DATA
+
+Example::
+
+    FACEBOOK_EXTRA_DATA = [(..., ...)]
+
+Settings must be a list of tuples mapping value name in response and value
+alias used to store.
 
 -------
 Twitter
@@ -357,7 +417,34 @@ anonymous values will be used if not configured as described in their
 
       GOOGLE_OAUTH_EXTRA_SCOPE = [...]
 
-check which Apps are included in their `Google Data Protocol Directory`_
+Check which applications can be included in their `Google Data Protocol Directory`_
+
+-------------
+Google OAuth2
+-------------
+Recently Google launched OAuth2 support following the definition at
+`OAuth2 draft`. It works in a similar way to plain OAuth mechanism, but
+developers *must* register an application and apply for a set of keys. Check
+`Google OAuth2`_ document for details.
+
+**Note**:
+  This support is experimental as Google implementation may change and 
+  OAuth2 is still a draft.
+
+To enable OAuth2 support:
+
+- fill "Client Key" and "Client Secret" settings, these values can be obtained
+  easily as described on `OAuth2 Registering`_ doc::
+
+      GOOGLE_OAUTH2_CLIENT_KEY = ''
+      GOOGLE_OAUTH2_CLIENT_SECRET = ''
+
+- scopes are shared between OAuth mechanisms::
+
+      GOOGLE_OAUTH_EXTRA_SCOPE = [...]
+
+Check which applications can be included in their `Google Data Protocol Directory`_
+
 
 -------
 Testing
@@ -407,6 +494,13 @@ Attributions to whom deserves:
 
   - Twitter and OAuth improvements
 
+- Quard_ (Vadym Zakovinko)
+
+  - LinkedIn support
+
+- micrypt_ (Seyi Ogunyemi)
+
+  - OAuth2 migration
 
 
 ----------
@@ -438,7 +532,7 @@ Base work is copyrighted by:
 .. _django-twitter-oauth: https://github.com/henriklied/django-twitter-oauth
 .. _django-openid-auth: https://launchpad.net/django-openid-auth
 .. _python-openid: http://pypi.python.org/pypi/python-openid/
-.. _python-oauth: https://github.com/leah/python-oauth
+.. _python-oauth2: https://github.com/simplegeo/python-oauth2
 .. _Twitter development resources: http://dev.twitter.com/pages/auth
 .. _Twitter App Creation: http://twitter.com/apps/new
 .. _dnsmasq: http://www.thekelleys.org.uk/dnsmasq/doc.html
@@ -448,13 +542,18 @@ Base work is copyrighted by:
 .. _Orkut API:  http://code.google.com/apis/orkut/docs/rest/developers_guide_protocol.html#Authenticating
 .. _Google OpenID: http://code.google.com/apis/accounts/docs/OpenID.html
 .. _Google OAuth: http://code.google.com/apis/accounts/docs/OAuth.html
+.. _Google OAuth2: http://code.google.com/apis/accounts/docs/OAuth2.html
+.. _OAuth2 Registering: http://code.google.com/apis/accounts/docs/OAuth2.html#Registering
 .. _Google Data Protocol Directory: http://code.google.com/apis/gdata/docs/directory.html
+.. _OAuth2 draft: http://tools.ietf.org/html/draft-ietf-oauth-v2-10
 .. _OAuth reference: http://code.google.com/apis/accounts/docs/OAuth_ref.html#SigningOAuth
 .. _Yahoo OpenID: http://openid.yahoo.com/
 .. _Twitter OAuth: http://dev.twitter.com/pages/oauth_faq
 .. _Facebook OAuth: http://developers.facebook.com/docs/authentication/
+.. _Linkedin OAuth: https://www.linkedin.com/secure/developer
 .. _Orkut OAuth:  http://code.google.com/apis/orkut/docs/rest/developers_guide_protocol.html#Authenticating
 .. _myOpenID: https://www.myopenid.com/
+.. _LiveJournal OpenID: http://www.livejournal.com/support/faqbrowse.bml?faqid=283
 .. _pypi: http://pypi.python.org/pypi/django-social-auth/
 .. _github: https://github.com/omab/django-social-auth
 .. _issues in github: https://github.com/omab/django-social-auth/issues
@@ -463,4 +562,5 @@ Base work is copyrighted by:
 .. _jezdez: https://github.com/jezdez
 .. _alfredo: https://github.com/alfredo
 .. _mattucf: https://github.com/mattucf
-.. _LiveJournal OpenID: http://www.livejournal.com/support/faqbrowse.bml?faqid=283
+.. _Quard: https://github.com/Quard
+.. _micrypt: https://github.com/micrypt

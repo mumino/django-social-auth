@@ -1,5 +1,6 @@
 """Social auth models"""
 import warnings
+from datetime import timedelta
 
 from django.db import models
 from social_auth.conf import settings
@@ -8,8 +9,10 @@ try:
 except:
     from social_auth.signals import user_logged_in
 
-# If User class is overrided, it must provide the following fields,
-# or it won't be playing nicely with auth module:
+from social_auth.fields import JSONField
+
+# If User class is overridden, it *must* provide the following fields,
+# or it won't be playing nicely with django.contrib.auth module:
 #
 #   username   = CharField()
 #   last_login = DateTimeField()
@@ -40,9 +43,10 @@ class UserSocialAuth(models.Model):
     user = models.ForeignKey(User, related_name='social_auth', null=True, blank=True)
     provider = models.CharField(max_length=32)
     uid = models.CharField(max_length=255)
-    extra_data = models.TextField(default='', blank=True)
     session_key = models.CharField(max_length=64, null=True, blank=True, db_index=True)
     created_on = models.DateTimeField(auto_now_add=True)
+    extra_data = JSONField(blank=True)
+
     class Meta:
         """Meta data"""
         unique_together = ('provider', 'uid')
@@ -51,10 +55,23 @@ class UserSocialAuth(models.Model):
         """Return associated user unicode representation"""
         return unicode(self.user)
 
+    def expiration_delta(self):
+        """Return saved session expiration seconds if any. Is retuned in
+        the form of a timedelta data type. None is returned if there's no
+        value stored or it's malformed.
+        """
+        if self.extra_data:
+            name = getattr(settings, 'SOCIAL_AUTH_EXPIRATION', 'expires')
+            try:
+                return timedelta(seconds=int(self.extra_data.get(name)))
+            except (ValueError, TypeError):
+                pass
+        return None
+
 
 class Nonce(models.Model):
     """One use numbers"""
-    server_url = models.TextField()
+    server_url = models.CharField(max_length=255)
     timestamp = models.IntegerField()
     salt = models.CharField(max_length=40)
 
@@ -65,7 +82,7 @@ class Nonce(models.Model):
 
 class Association(models.Model):
     """OpenId account association"""
-    server_url = models.TextField()
+    server_url = models.CharField(max_length=255)
     handle = models.CharField(max_length=255)
     secret = models.CharField(max_length=255)  # Stored base64 encoded
     issued = models.IntegerField()
