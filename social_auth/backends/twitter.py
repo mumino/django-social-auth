@@ -31,7 +31,8 @@ class TwitterBackend(OAuthBackend):
     name = 'twitter'
     EXTRA_DATA = [('id', 'id')]
 
-    def get_user_details(self, response):
+    @classmethod
+    def get_user_details(cls, response):
         """Return user details from Twitter account"""
         return {USERNAME: response['screen_name'],
                 'email': '',  # not supplied
@@ -49,7 +50,7 @@ class TwitterAuth(ConsumerBasedOAuth):
     AUTH_BACKEND = TwitterBackend
     SETTINGS_KEY_NAME = 'TWITTER_CONSUMER_KEY'
     SETTINGS_SECRET_NAME = 'TWITTER_CONSUMER_SECRET'
-
+    
     def user_data(self, access_token):
         """Return user data provided"""
         request = self.oauth_request(access_token, TWITTER_CHECK_AUTH)

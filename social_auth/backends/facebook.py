@@ -35,7 +35,8 @@ class FacebookBackend(OAuthBackend):
     # Default extra data to store
     EXTRA_DATA = [('id', 'id'), ('expires', EXPIRES_NAME)]
 
-    def get_user_details(self, response):
+    @classmethod
+    def get_user_details(cls, response):
         """Return user details from Facebook account"""
         return {USERNAME: response['name'],
                 'email': response.get('email', ''),
@@ -76,6 +77,7 @@ class FacebookAuth(BaseOAuth):
                 # premission was requested
                 if 'expires' in response:
                     data['expires'] = response['expires'][0]
+            self.response = data
             kwargs.update({'response': data, FacebookBackend.name: True})
             return authenticate(*args, **kwargs)
         else:

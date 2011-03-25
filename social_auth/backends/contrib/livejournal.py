@@ -17,10 +17,11 @@ LIVEJOURNAL_USER_FIELD = 'openid_lj_user'
 class LiveJournalBackend(OpenIDBackend):
     """LiveJournal OpenID authentication backend"""
     name = 'livejournal'
-
-    def get_user_details(self, response):
+    
+    @classmethod
+    def get_user_details(cls, response):
         """Generate username from identity url"""
-        values = super(LiveJournalBackend, self).get_user_details(response)
+        values = super(LiveJournalBackend, cls).get_user_details(response)
         values[USERNAME] = values.get(USERNAME) or \
                            urlparse.urlsplit(response.identity_url)\
                                    .netloc.split('.', 1)[0]

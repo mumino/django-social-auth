@@ -1,10 +1,10 @@
 """Views"""
-from django.conf import settings
+from social_auth.conf import settings
 from django.http import HttpResponseRedirect, HttpResponse, \
                         HttpResponseServerError
 from django.core.urlresolvers import reverse
 from django.db import transaction
-from django.contrib.auth import login, REDIRECT_FIELD_NAME
+from django.contrib.auth import login, REDIRECT_FIELD_NAME, authenticate
 from django.contrib.auth.decorators import login_required
 
 from social_auth.backends import get_backend
@@ -33,28 +33,48 @@ def complete_process(request, backend):
     backend = get_backend(backend, request, request.path)
     if not backend:
         return HttpResponseServerError('Incorrect authentication service')
-
+    
     try:
-        user = backend.auth_complete(session=request.session)
+        user = backend.auth_complete()
+        provider = None
+        if not user:
+            userDetails = backend.AUTH_BACKEND.\
+                                        get_user_details(backend.response)
+            uid =  backend.AUTH_BACKEND.get_user_id(userDetails,
+                                                    backend.response)
+            provider = backend.AUTH_BACKEND.name
+            user = authenticate(userDetails=userDetails,
+                                uid=uid,
+                                provider=provider)
+            if not user:
+                request.session["social_data"] = {"uid":uid,
+                                                  "provider":provider,
+                                                  "userDetails":userDetails
+                                                  }
+                    
+        if user and getattr(user, 'is_active', True):
+            login(request, user)
+            if getattr(settings, 'SOCIAL_AUTH_SESSION_EXPIRATION', True):
+                # Set session expiration date if present and not disabled by
+                # setting
+                backend_name = provider or backend.AUTH_BACKEND.name
+                social_user = user.social_auth.get(provider=backend_name)
+                if social_user.expiration_delta():
+                    request.session.set_expiry(social_user.expiration_delta())
+            url = request.session.pop(REDIRECT_FIELD_NAME, '') or DEFAULT_REDIRECT
+        else:
+            url = getattr(settings, 'LOGIN_URL')
+        
     except ValueError, e:  # some Authentication error ocurred
-        user = None
+        user = None        
         error_key = getattr(settings, 'SOCIAL_AUTH_ERROR_KEY', None)
         if error_key:  # store error in session
             request.session[error_key] = str(e)
-
-    if user and getattr(user, 'is_active', True):
-        login(request, user)
-        if getattr(settings, 'SOCIAL_AUTH_SESSION_EXPIRATION', True):
-            # Set session expiration date if present and not disabled by
-            # setting
-            backend_name = backend.AUTH_BACKEND.name
-            social_user = user.social_auth.get(provider=backend_name)
-            if social_user.expiration_delta():
-                request.session.set_expiry(social_user.expiration_delta())
-        url = request.session.pop(REDIRECT_FIELD_NAME, '') or DEFAULT_REDIRECT
-    else:
         url = getattr(settings, 'LOGIN_ERROR_URL', settings.LOGIN_URL)
+        
     return HttpResponseRedirect(url)
+
+   
 
 
 @login_required
@@ -71,7 +91,7 @@ def associate_complete(request, backend):
     backend = get_backend(backend, request, request.path)
     if not backend:
         return HttpResponseServerError('Incorrect authentication service')
-    backend.auth_complete(user=request.user, session=request.session)
+    backend.auth_complete(user=request.user)
     url = request.session.pop(REDIRECT_FIELD_NAME, '') or DEFAULT_REDIRECT
     return HttpResponseRedirect(url)
 

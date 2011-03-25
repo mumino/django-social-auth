@@ -4,11 +4,6 @@ from django.conf.urls.defaults import patterns, url
 from social_auth.views import auth, complete, associate, associate_complete, \
                               disconnect
 
-try:
-    from django.contrib.auth.signals import  user_logged_in
-except:
-    from .signals import login_register
-    login_register()
 
 urlpatterns = patterns('',
     url(r'^login/(?P<backend>[^/]+)/$', auth, name='begin'),

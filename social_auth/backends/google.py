@@ -47,11 +47,13 @@ class GoogleOAuthBackend(OAuthBackend):
     """Google OAuth authentication backend"""
     name = 'google-oauth'
 
-    def get_user_id(self, details, response):
+    @classmethod
+    def get_user_id(cls, details, response):
         "Use google email as unique id"""
         return details['email']
-
-    def get_user_details(self, response):
+    
+    @classmethod
+    def get_user_details(cls, response):
         """Return user details from Orkut account"""
         email = response['email']
         return {USERNAME: email.split('@', 1)[0],

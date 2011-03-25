@@ -20,6 +20,7 @@ pre_update = Signal(providing_args=['user', 'response', 'details'])
 user_logged_in = Signal(providing_args=['request', 'user'])
 
 login_registered = False
+
 def login_register():
     global login_registered
     from django.contrib.auth import login
@@ -30,4 +31,5 @@ def login_register():
     if not login_registered:
         auth.login = new_login
         login_registered = True
+
 socialauth_registered = Signal(providing_args=['user', 'response', 'details'])

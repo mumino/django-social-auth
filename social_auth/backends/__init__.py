@@ -114,12 +114,13 @@ class SocialAuthBackend(ModelBackend):
             # at this moment, merging account is not an option because that
             # would imply update user references on other apps, that's too
             # much intrusive
-            if 'user' in kwargs and kwargs['user'] != social_user.user:
+            if 'user' in kwargs and kwargs['user'] != social_user.user and social_user.user:
                 raise ValueError('Account already in use.')
             user = social_user.user
 
         # Update user account data.
-        self.update_user_details(user, response, details, is_new)
+        if social_user.user:
+            self.update_user_details(user, response, details, is_new)
 
         # Update extra_data storage, unless disabled by setting
         if getattr(settings, 'SOCIAL_AUTH_EXTRA_DATA', True):
@@ -213,11 +214,13 @@ class SocialAuthBackend(ModelBackend):
         if changed:
             user.save()
 
-    def get_user_id(self, details, response):
+    @classmethod
+    def get_user_id(cls, details, response):
         """Must return a unique ID from values returned on details"""
         raise NotImplementedError('Implement in subclass')
-
-    def get_user_details(self, response):
+    
+    @classmethod
+    def get_user_details(cls, response):
         """Must return user details in a know internal struct:
             {USERNAME: <username if any>,
              'email': <user email if any>,
@@ -250,7 +253,8 @@ class OAuthBackend(SocialAuthBackend):
     """
     EXTRA_DATA = None
 
-    def get_user_id(self, details, response):
+    @classmethod
+    def get_user_id(cls, details, response):
         "OAuth providers return an unique user id in response"""
         return response['id']
 
@@ -268,12 +272,14 @@ class OAuthBackend(SocialAuthBackend):
 class OpenIDBackend(SocialAuthBackend):
     """Generic OpenID authentication backend"""
     name = 'openid'
-
-    def get_user_id(self, details, response):
+    
+    @classmethod
+    def get_user_id(cls, details, response):
         """Return user unique id provided by service"""
         return response.identity_url
 
-    def values_from_response(self, response, sreg_names=None, ax_names=None):
+    @classmethod
+    def values_from_response(cls, response, sreg_names=None, ax_names=None):
         """Return values from SimpleRegistration response or
         AttributeExchange response if present.
 
@@ -298,13 +304,14 @@ class OpenIDBackend(SocialAuthBackend):
                                 for src, alias in ax_names)
         return values
 
-    def get_user_details(self, response):
+    @classmethod
+    def get_user_details(cls, response):
         """Return user details from an OpenID request"""
         values = {USERNAME: '', 'email': '', 'fullname': '',
                   'first_name': '', 'last_name': ''}
         # update values using SimpleRegistration or AttributeExchange
         # values
-        values.update(self.values_from_response(response,
+        values.update(cls.values_from_response(response,
                                                 SREG_ATTR,
                                                 OLD_AX_ATTRS + \
                                                 AX_SCHEMA_ATTRS))
@@ -412,6 +419,7 @@ class OpenIdAuth(BaseAuth):
     def auth_complete(self, *args, **kwargs):
         response = self.consumer().complete(dict(self.data.items()),
                                             self.request.build_absolute_uri())
+        self.response = response
         if not response:
             raise ValueError('This is an OpenID relying party endpoint')
         elif response.status == SUCCESS:
@@ -524,7 +532,7 @@ class ConsumerBasedOAuth(BaseOAuth):
         data = self.user_data(access_token)
         if data is not None:
             data['access_token'] = access_token.to_string()
-
+        self.response = data
         kwargs.update({'response': data, self.AUTH_BACKEND.name: True})
         return authenticate(*args, **kwargs)
 
@@ -641,6 +649,7 @@ class BaseOAuth2(BaseOAuth):
             raise ValueError('OAuth2 authentication failed: %s' % error)
         else:
             response.update(self.user_data(response['access_token']) or {})
+            self.response = response
             kwargs.update({'response': response, self.AUTH_BACKEND.name: True})
             return authenticate(*args, **kwargs)
 
