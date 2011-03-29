@@ -47,11 +47,12 @@ def complete_process(request, backend):
                                 uid=uid,
                                 provider=provider)
             if not user:
-                request.session["social_data"] = {"uid":uid,
+                USER_DATA_SESSION_NAME = getattr(settings,
+                                                 'USER_DATA_SESSION_NAME')
+                request.session[USER_DATA_SESSION_NAME] = {"uid":uid,
                                                   "provider":provider,
                                                   "userDetails":userDetails
                                                   }
-                    
         if user and getattr(user, 'is_active', True):
             login(request, user)
             if getattr(settings, 'SOCIAL_AUTH_SESSION_EXPIRATION', True):
@@ -64,14 +65,12 @@ def complete_process(request, backend):
             url = request.session.pop(REDIRECT_FIELD_NAME, '') or DEFAULT_REDIRECT
         else:
             url = getattr(settings, 'LOGIN_URL')
-        
     except ValueError, e:  # some Authentication error ocurred
         user = None        
         error_key = getattr(settings, 'SOCIAL_AUTH_ERROR_KEY', None)
         if error_key:  # store error in session
             request.session[error_key] = str(e)
         url = getattr(settings, 'LOGIN_ERROR_URL', settings.LOGIN_URL)
-        
     return HttpResponseRedirect(url)
 
    

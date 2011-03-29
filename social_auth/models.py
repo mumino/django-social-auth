@@ -7,8 +7,6 @@ from social_auth.conf import settings
 try:
     from django.contrib.auth.signals import user_logged_in
 except:
-    from social_auth.signals import login_register
-    login_register()
     from social_auth.signals import user_logged_in
 
 from social_auth.fields import JSONField
@@ -96,13 +94,16 @@ class Association(models.Model):
         return '%s %s' % (self.handle, self.issued)
 
 def associate_from_session(user, request, *args, **kwargs):
-    social_key = request.session.get("social_key")
-    if social_key:
-        UserSocialAuth.objects.filter(user=None).filter(session_key=social_key).update(user=user, session_key=None)
-        del request.session["social_key"]
+    print "Signal logged: ", user
     USER_DATA_SESSION_NAME = getattr(settings, 'USER_DATA_SESSION_NAME')
+    social_data = request.session.get(USER_DATA_SESSION_NAME)
+    if social_data:
+        UserSocialAuth.objects.create(user=user,
+                                      provider=social_data.get("provider"),
+                                      uid=social_data.get("uid"))
     try:
         del request.session[USER_DATA_SESSION_NAME]
     except:
         pass
-user_logged_in.connect(associate_from_session)
+
+user_logged_in.connect(associate_from_session, User)

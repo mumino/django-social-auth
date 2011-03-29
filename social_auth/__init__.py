@@ -7,3 +7,9 @@ __version__ = '.'.join(map(str, version))
 
 
 
+try:
+    from django.contrib.auth.signals import user_logged_in
+except:
+    from social_auth.signals import login_register
+    login_register()
+    from social_auth.signals import user_logged_in
